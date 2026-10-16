@@ -1,31 +1,72 @@
+
 name: CI - Python (Build y Tests)
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
+
+permissions:
+  contents: read
 
 jobs:
   build-and-test:
+    name: Ejecutar pruebas Python
     runs-on: ubuntu-latest
     env:
       PYTHONPATH: ${{ github.workspace }}
 
     steps:
-    - name: Obtener código
-      uses: actions/checkout@v4
+      - name: Obtener código
+        uses: actions/checkout@v4
 
-    - name: Instalar Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.10"
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
 
-    - name: Instalar dependencias
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-    - name: Ejecutar pruebas
-      run: |
-        pytest -q
+      - name: Ejecutar pruebas
+        run: pytest -q
+
+  deploy:
+    name: Desplegar en GitHub Pages
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@v4
+
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Preparar página
+        run: |
+          mkdir public
+          cp index.html public/
+
+      - name: Subir archivos
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: public
+
+      - name: Publicar página
+        id: deployment
+        uses: actions/deploy-pages@v4
+
